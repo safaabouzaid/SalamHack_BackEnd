@@ -1,136 +1,92 @@
-from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListItem
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
-from django.http import HttpResponse
-import os
-import google.generativeai as genai
+from rest_framework import status
+from django.contrib.auth import get_user_model
+from .models import Education, Project,Experience,TrainingCourse,Resume,Skill
 from decouple import config
-#api_key = config('API_KEY')
-#genai.configure(api_key="AIzaSyC_7sXsoqlmDMWVysUZQn1SUa4-KkAYlyw")
-genai.configure(api_key=config('API_KEY'))
+import google.generativeai as genai
 
+User = get_user_model()
+
+genai.configure(api_key=config('API_KEY'))
 class ResumeAPIView(APIView):
     def post(self, request):
         user_data = request.data
 
+        user, created  = User.objects.get_or_create(
+            email=user_data.get("email", f"guest_{User.objects.count()}@example.com"),
+            defaults={
+                 "username": user_data.get("username", f"guest_{User.objects.count()}"),
+                "phone": user_data.get("phone", ""),
+                "location": user_data.get("location", ""),
+            }
+        )
+        if created:
+          user.set_password(user_data.get("password", "default_password"))
+          user.save()
+
         profile_summary = self.generate_summary(user_data)
-        user_data['profile_summary'] = profile_summary
 
-        pdf_path = self.generate_resume(user_data)
+        resume = Resume.objects.create(
+            user=user,
+            summary=profile_summary,
+            github_link=user_data.get('github_link'),
+            linkedin_link=user_data.get('linkedin_link'),
+        )
 
-        try:
-            with open(pdf_path, 'rb') as f:
-                response = HttpResponse(f.read(), content_type='application/pdf')
-                response['Content-Disposition'] = 'attachment; filename="generated_resume.pdf"'
-            return response
-        finally:
-            os.remove(pdf_path)
+        for skill in user_data.get("skills", []):
+            Skill.objects.create(resume=resume, skill=skill.get('skill'), level=skill.get('level'))
+
+        for edu in user_data.get("education", []):
+            Education.objects.create(resume=resume, degree=edu.get('degree'), institution=edu.get('institution'),
+                                     start_date=edu.get('start_date'), end_date=edu.get('end_date'), description=edu.get('description'))
+
+        for proj in user_data.get("projects", []):
+            Project.objects.create(resume=resume, title=proj.get('title'), description=proj.get('description'),
+                                   github_link=proj.get('github_link'))
+
+        for exp in user_data.get("experiences", []):
+            Experience.objects.create(resume=resume, job_title=exp.get('job_title'), company=exp.get('company'),
+                                      start_date=exp.get('start_date'), end_date=exp.get('end_date'), description=exp.get('description'))
+
+        for training_course in user_data.get("trainings_courses", []):
+            TrainingCourse.objects.create(resume=resume, title=training_course.get('title'), institution=training_course.get('institution'),
+                                          start_date=training_course.get('start_date'), end_date=training_course.get('end_date'), description=training_course.get('description'))
+
+        return Response({
+            "resume_id": resume.id,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "phone": user.phone,
+                "location": user.location,
+            },
+            "summary": resume.summary,
+            "github_link": resume.github_link,
+            "linkedin_link": resume.linkedin_link,
+            "skills": [{"skill": s.skill, "level": s.level} for s in resume.skills.all()],
+            "education": [{"degree": e.degree, "institution": e.institution, "start_date": e.start_date, "end_date": e.end_date, "description": e.description} for e in resume.education.all()],
+            "projects": [{"title": p.title, "description": p.description, "github_link": p.github_link} for p in resume.projects.all()],
+            "experiences": [{"job_title": ex.job_title, "company": ex.company, "start_date": ex.start_date, "end_date": ex.end_date, "description": ex.description} for ex in resume.experiences.all()],
+            "trainings_courses": [{"title": tc.title, "institution": tc.institution, "start_date": tc.start_date, "end_date": tc.end_date, "description": tc.description} for tc in resume.trainings_courses.all()],
+        })
 
     def generate_summary(self, user_data):
         skills_text = ", ".join([skill.get('skill', 'N/A') for skill in user_data.get('skills', [])])
         education_text = "; ".join(
-            [f"{edu.get('degree', 'N/A')} at {edu.get('institution', 'N/A')} ({edu.get('start_date', 'N/A')} - {edu.get('end_date', 'N/A')})" 
+            [f"{edu.get('degree', 'N/A')} at {edu.get('institution', 'N/A')} ({edu.get('start_date', 'N/A')} - {edu.get('end_date', 'N/A')})"
              for edu in user_data.get('education', [])]
-        )
-        projects_text = "; ".join(
-            [f"{project.get('title', 'N/A')} ({project.get('description', 'N/A')})" 
-             for project in user_data.get('projects', [])]
         )
 
         prompt = f"""
         Generate a professional and impactful resume summary in the first person, emphasizing my problem-solving skills, leadership, and teamwork. Focus on the following:
-- My key technical skills: {skills_text}
-- My educational achievements and highlights: {education_text}
-Ensure the summary is concise, ATS-optimized, and aligned with software development roles.
-"""
+        - My key technical skills: {skills_text}
+        - My educational achievements and highlights: {education_text}
+        Ensure the summary is concise, ATS-optimized, and aligned with software development roles.
+        """
 
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content([prompt])
-        summary = response.text.strip()
-        return summary
+        return response.text.strip()
 
-    def generate_resume(self, user_data):
-        pdf_file = "generated_resume.pdf"
-        pdf_path = os.path.join(os.getcwd(), pdf_file)
-        document = SimpleDocTemplate(pdf_path, pagesize=letter)
-        styles = getSampleStyleSheet()
-        story = []
-
-        # Header
-        name = user_data.get('name', 'N/A')
-        email = user_data.get('email', 'N/A')
-        phone = user_data.get('phone', 'N/A')
-        location = user_data.get('location', 'N/A')
-
-        story.append(Paragraph(name, styles['Title']))
-        story.append(Paragraph(f"Email: {email} | Phone: {phone} | Location: {location}", styles['Normal']))
-        story.append(Spacer(1, 12))
-
-        # Summary
-        profile_summary = user_data.get('profile_summary', 'No profile summary provided.')
-        story.append(Paragraph("Summary", styles['Heading2']))
-        story.append(Paragraph(profile_summary, styles['Normal']))
-        story.append(Spacer(1, 12))
-
-        # Skills 
-        skills = user_data.get('skills', [])
-        story.append(Paragraph("Skills", styles['Heading2']))
-        if skills:
-            for skill in skills:
-                story.append(Paragraph(f"- {skill.get('skill', 'N/A')} (Level: {skill.get('level', 'N/A')})", styles['Normal']))
-        else:
-            story.append(Paragraph("No skills provided.", styles['Normal']))
-        story.append(Spacer(1, 12))
-
-        # Education
-        education = user_data.get('education', [])
-        story.append(Paragraph("Education", styles['Heading2']))
-        if education:
-            for edu in education:
-                edu_text = f"{edu.get('degree', 'N/A')} at {edu.get('institution', 'N/A')} ({edu.get('start_date', 'N/A')} - {edu.get('end_date', 'N/A')})"
-                story.append(Paragraph(edu_text, styles['Normal']))
-                story.append(Paragraph(edu.get('description', 'N/A'), styles['Normal']))
-        else:
-            story.append(Paragraph("No education details provided.", styles['Normal']))
-        story.append(Spacer(1, 12))
-
-        # Courses
-        courses = user_data.get('courses', [])
-        story.append(Paragraph("Courses", styles['Heading2']))
-        if courses:
-            for course in courses:
-                course_text = f"{course.get('course_name', 'N/A')} on {course.get('platform', 'N/A')} ({course.get('start_date', 'N/A')} - {course.get('end_date', 'N/A')})"
-                story.append(Paragraph(course_text, styles['Normal']))
-        else:
-            story.append(Paragraph("No courses provided.", styles['Normal']))
-        story.append(Spacer(1, 12))
-
-        # Internships
-        internships = user_data.get('internships', [])
-        story.append(Paragraph("Internships", styles['Heading2']))
-        if internships:
-            for internship in internships:
-                internship_text = f"{internship.get('title', 'N/A')} at {internship.get('company', 'N/A')} ({internship.get('duration', 'N/A')})"
-                story.append(Paragraph(internship_text, styles['Normal']))
-        else:
-            story.append(Paragraph("No internships provided.", styles['Normal']))
-        story.append(Spacer(1, 12))
-
-        # Projects
-        projects = user_data.get('projects', [])
-        story.append(Paragraph("Projects", styles['Heading2']))
-        if projects:
-            for project in projects:
-                project_text = f"{project.get('title', 'N/A')} - {project.get('description', 'N/A')}"
-                story.append(Paragraph(project_text, styles['Normal']))
-                if project.get('project_link'):
-                    story.append(Paragraph(f"Link: {project.get('project_link', 'N/A')}", styles['Normal']))
-        else:
-            story.append(Paragraph("No projects provided.", styles['Normal']))
-
-        document.build(story)
-        return pdf_path
