@@ -2,15 +2,15 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
-    username = models.CharField(max_length=255,unique=True,default='')
-    email = models.EmailField(unique=True)
+    username = models.CharField(max_length=255, unique=True, default='')
+    email = models.EmailField()
     phone = models.CharField(max_length=20, blank=True, null=True)
     location = models.CharField(max_length=255, blank=True, null=True)
-    password = models.CharField(max_length=128, default='default_password')
-
-
+    github_link = models.URLField(blank=True, null=True)     
+    linkedin_link = models.URLField(blank=True, null=True)     
+    
     def __str__(self):
-        return self.name
+        return self.username
 
 class Resume(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="resumes")
@@ -20,7 +20,7 @@ class Resume(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Resume for {self.user.name} - {self.created_at}"
+        return f"Resume for {self.user.username} - {self.created_at}"
 
 class Skill(models.Model):
     resume = models.ForeignKey(Resume, on_delete=models.CASCADE, related_name="skills")
@@ -28,7 +28,7 @@ class Skill(models.Model):
     level = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
-        return f"{self.skill} - {self.resume.user.name}"
+        return f"{self.skill} - {self.resume.user.username}"
 
 class Education(models.Model):
     resume = models.ForeignKey(Resume, on_delete=models.CASCADE, related_name="education")
@@ -39,7 +39,7 @@ class Education(models.Model):
     description = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.degree} at {self.institution} - {self.resume.user.name}"
+        return f"{self.degree} at {self.institution} - {self.resume.user.username}"
 
 class Project(models.Model):
     resume = models.ForeignKey(Resume, on_delete=models.CASCADE, related_name="projects")
@@ -48,7 +48,7 @@ class Project(models.Model):
     github_link = models.URLField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.title} - {self.resume.user.name}"
+        return f"{self.title} - {self.resume.user.username}"
 
 class Experience(models.Model):
     resume = models.ForeignKey(Resume, on_delete=models.CASCADE, related_name="experiences")
@@ -59,7 +59,7 @@ class Experience(models.Model):
     description = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.job_title} at {self.company} - {self.resume.user.name}"
+        return f"{self.job_title} at {self.company} - {self.resume.user.username}"
 
 class TrainingCourse(models.Model):
     resume = models.ForeignKey(Resume, on_delete=models.CASCADE, related_name="trainings_courses")
@@ -70,4 +70,4 @@ class TrainingCourse(models.Model):
     description = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.title} at {self.institution} - {self.resume.user.name}"
+        return f"{self.title} at {self.institution} - {self.resume.user.username}"
