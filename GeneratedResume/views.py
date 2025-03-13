@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from .models import Education, Project,Experience,TrainingCourse,Resume,Skill
-from decouple import config
 import google.generativeai as genai
+from decouple import config
 
 User = get_user_model()
 
