@@ -71,3 +71,4 @@ class TrainingCourse(models.Model):
 
     def __str__(self):
         return f"{self.title} at {self.institution} - {self.resume.user.username}"
+

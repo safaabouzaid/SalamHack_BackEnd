@@ -71,3 +71,11 @@ class ResumeAPIView(APIView):
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content([prompt])
         return response.text.strip()
+
+
+
+
+
+
+
+
