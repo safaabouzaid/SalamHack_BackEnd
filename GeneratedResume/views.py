@@ -2,14 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
+
+from resume.settings import GOOGLE_API_KEY
 from .models import Education, Project, Experience, TrainingCourse, Resume, Skill
 from .serializer import ResumeSerializer, UserSerializer
 import google.generativeai as genai
 from decouple import config
-
+import google.generativeai as genai
+from django.conf import settings  
 User = get_user_model()
 
-genai.configure(api_key=config('API_KEY'))
+genai.configure(api_key="AIzaSyAWfqk0NLuH3FV8BJgI1RtGQYoRxIR46sM")
 
 class ResumeAPIView(APIView):
     def post(self, request):
