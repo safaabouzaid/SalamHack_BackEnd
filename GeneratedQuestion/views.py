@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from .models import GenerateQuestion
 from .serializers import GenerateQuestionSerializer
 import google.generativeai as genai
-from .utils import extract_json  # استيراد الدالة الجديدة
+from .utils import extract_json 
 
 def generate_questions(job_field):
 

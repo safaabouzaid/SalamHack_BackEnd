@@ -2,7 +2,6 @@ from django.db import models
 
 # Create your models here.
 class GenerateQuestion(models.Model):
-    """تخزين الأسئلة التقنية التي تم توليدها"""
     job_field = models.CharField(max_length=255)
     questions = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
