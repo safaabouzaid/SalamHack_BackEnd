@@ -8,19 +8,26 @@ from .models import GenerateQuestion
 from .serializers import GenerateQuestionSerializer
 import google.generativeai as genai
 from .utils import extract_json 
+from .utils import extract_json
 
 def generate_questions(job_field):
-
     input_prompt = f'''
-    You are an AI assistant. Provide exactly 5 technical interview questions related to "{job_field}" in JSON format.
+    You are an AI assistant. Generate exactly 5 multiple-choice questions (MCQs) related to "{job_field}" in JSON format.
+    Each MCQ should have four options and one correct answer.
+
     Strictly follow this format:
     {{
         "questions": [
-            "Question 1?",
-            "Question 2?",
-            "Question 3?",
-            "Question 4?",
-            "Question 5?"
+            {{
+                "question": "What is ...?",
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "correct_answer": "Option A"
+            }},
+            {{
+                "question": "Which of the following ...?",
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "correct_answer": "Option B"
+            }}
         ]
     }}
     '''
@@ -38,15 +45,14 @@ def generate_questions(job_field):
     except json.JSONDecodeError:
         return {"questions": ["Invalid JSON format received from the model"]}
 
-class GenerateQuestionView(APIView):
 
+class GenerateQuestionView(APIView):
     def post(self, request):
         job_field = request.data.get("job_field")
         if not job_field:
             return Response({"error": "job_field is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         generated_questions = generate_questions(job_field)
-
         if "Invalid JSON format received from the model" in generated_questions["questions"]:
             return Response({"error": "Failed to generate valid questions"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -54,5 +60,88 @@ class GenerateQuestionView(APIView):
             job_field=job_field,
             questions=generated_questions["questions"]
         )
+
         serializer = GenerateQuestionSerializer(question_entry)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def generate_questions(job_field):
+
+#     input_prompt = f'''
+#     You are an AI assistant. Provide exactly 5 technical interview questions related to "{job_field}" in JSON format.
+#     Strictly follow this format:
+#     {{
+#         "questions": [
+#             "Question 1?",
+#             "Question 2?",
+#             "Question 3?",
+#             "Question 4?",
+#             "Question 5?"
+#         ]
+#     }}
+#     '''
+
+#     model = genai.GenerativeModel('gemini-1.5-flash')
+#     response = model.generate_content([input_prompt])
+
+#     if not response or not response.text.strip():
+#         return {"questions": ["No valid response received from the model"]}
+
+#     json_text = extract_json(response.text.strip())
+
+#     try:
+#         return json.loads(json_text) if json_text else {"questions": ["Invalid JSON format received from the model"]}
+#     except json.JSONDecodeError:
+#         return {"questions": ["Invalid JSON format received from the model"]}
+
+# class GenerateQuestionView(APIView):
+
+#     def post(self, request):
+#         job_field = request.data.get("job_field")
+#         if not job_field:
+#             return Response({"error": "job_field is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         generated_questions = generate_questions(job_field)
+
+#         if "Invalid JSON format received from the model" in generated_questions["questions"]:
+#             return Response({"error": "Failed to generate valid questions"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#         question_entry = GenerateQuestion.objects.create(
+#             job_field=job_field,
+#             questions=generated_questions["questions"]
+#         )
+#         serializer = GenerateQuestionSerializer(question_entry)
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
