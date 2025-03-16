@@ -13,7 +13,10 @@ from .utils import extract_json
 def generate_questions(job_field):
     input_prompt = f'''
     You are an AI assistant. Generate exactly 5 multiple-choice questions (MCQs) related to "{job_field}" in JSON format.
-    Each MCQ should have four options and one correct answer.
+    Each MCQ should have:
+    - A question string.
+    - Four options in an array, where each option is a string.
+    - The correct answer as the index of the correct option (starting from 0).
 
     Strictly follow this format:
     {{
@@ -21,12 +24,12 @@ def generate_questions(job_field):
             {{
                 "question": "What is ...?",
                 "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correct_answer": "Option A"
+                "correct_answer": 0
             }},
             {{
                 "question": "Which of the following ...?",
                 "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correct_answer": "Option B"
+                "correct_answer": 2
             }}
         ]
     }}

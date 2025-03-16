@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'GeneratedResume',
     'EvaluationResume',
-    "GeneratedQuestion"
+    'GeneratedQuestion',
+    'RecommendationJob',
 ]
 
 MIDDLEWARE = [
