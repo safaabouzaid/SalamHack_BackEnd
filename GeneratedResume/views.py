@@ -10,11 +10,17 @@ from .serializer import ResumeSerializer, UserSerializer
 from decouple import config
 import google.generativeai as genai
 from django.conf import settings  
+from rest_framework.parsers import MultiPartParser, FormParser
+import fitz
+import re
+
+
 User = get_user_model()
 
 genai.configure(api_key="AIzaSyAWfqk0NLuH3FV8BJgI1RtGQYoRxIR46sM")
 
 class ResumeAPIView(APIView):
+    
     def post(self, request):
         user_data = request.data
 
@@ -78,43 +84,8 @@ class ResumeAPIView(APIView):
 
 
 
-########///////////ResumeUploadView///////#####
-class ResumeUploadView(APIView):
-    parser_classes = (MultiPartParser, FormParser)  
 
-    def post(self, request, user_id):
-        try:
-            user = User.objects.get(id=user_id) 
-        except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+# ------------------------------------
+#        **ResumeUploadView**
+# ------------------------------------
 
-        if "pdf_file" not in request.FILES:
-            return Response({"error": "No PDF file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
-
-        pdf_file = request.FILES["pdf_file"]
-
-        if pdf_file.size == 0:
-            return Response({"error": "Uploaded file is empty"}, status=status.HTTP_400_BAD_REQUEST)
-
-        if pdf_file.content_type != "application/pdf":
-            return Response({"error": "Uploaded file is not a valid PDF"}, status=status.HTTP_400_BAD_REQUEST)
-
-        pdf_data = pdf_file.read()
-        if not pdf_data:
-            return Response({"error": "Failed to read PDF file"}, status=status.HTTP_400_BAD_REQUEST)
-
-        resume = Resume.objects.create(user=user, pdf_file=pdf_file)
-
-        extracted_text = self.extract_text_from_pdf(pdf_data) 
-        self.parse_resume_data(resume, extracted_text)
-
-        serializer = ResumeSerializer(resume)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def extract_text_from_pdf(self, pdf_data):
-        """ استخراج النصوص من ملف PDF """
-        doc = fitz.open(stream=pdf_data, filetype="pdf")  
-        text = ""
-        for page in doc:  
-            text += page.get_text("text") + "\n"  
-        return text
