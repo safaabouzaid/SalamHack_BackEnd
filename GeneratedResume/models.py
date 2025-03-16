@@ -15,8 +15,7 @@ class User(AbstractUser):
 class Resume(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="resumes")
     summary = models.TextField(blank=True, null=True)
-    github_link = models.URLField(blank=True, null=True)
-    linkedin_link = models.URLField(blank=True, null=True)
+    pdf_file = models.FileField(upload_to='resumes/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -33,7 +33,7 @@ class TrainingCourseSerializer(serializers.ModelSerializer):
         fields = ['title', 'institution', 'start_date', 'end_date', 'description']
 
 class ResumeSerializer(serializers.ModelSerializer):
-    personal_details = UserSerializer(source='user')
+    personal_details = UserSerializer(source='user',required=False)
     skills = SkillSerializer(many=True, read_only=True)
     education = EducationSerializer(many=True, read_only=True)
     projects = ProjectSerializer(many=True, read_only=True)
@@ -42,10 +42,7 @@ class ResumeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Resume
-        fields = ['id','personal_details', 'summary', 'skills', 'education', 'projects', 'experiences', 'trainings_courses']
-
-
-
+        fields = ['id','personal_details', 'summary', 'skills', 'education', 'projects', 'experiences', 'trainings_courses','pdf_file']
 
 
 
