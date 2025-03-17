@@ -1,22 +1,18 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
-
-from resume.settings import GOOGLE_API_KEY
-from GeneratedResume.models import Education, Project, Experience, TrainingCourse, Resume, Skill
-from GeneratedResume.serializer import ResumeSerializer, UserSerializer
-from decouple import config
-from django.conf import settings  
 from rest_framework.parsers import MultiPartParser, FormParser
-import fitz
+from GeneratedResume.models import Education, Project, Experience, TrainingCourse, Resume, Skill
+from GeneratedResume.serializer import ResumeSerializer
+import fitz  # PyMuPDF
+import json
 import re
+import google.generativeai as genai
 
 User = get_user_model()
 
-# Create your views here.
 class ResumeUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
@@ -34,65 +30,48 @@ class ResumeUploadView(APIView):
         if pdf_file.content_type != "application/pdf":
             return Response({"error": "Uploaded file is not a valid PDF"}, status=status.HTTP_400_BAD_REQUEST)
 
-        pdf_data = pdf_file.read()
-        if not pdf_data:
-            return Response({"error": "Failed to read PDF file"}, status=status.HTTP_400_BAD_REQUEST)
+        extracted_text = self.extract_text_from_pdf(pdf_file.read())
 
-        resume = Resume.objects.create(user=user, pdf_file=pdf_file)
+        if not extracted_text.strip():
+            return Response({"error": "Failed to extract text from PDF"}, status=status.HTTP_400_BAD_REQUEST)
 
-        extracted_text = self.extract_text_from_pdf(pdf_data)
+        parsed_data = self.parse_resume_with_gemini(extracted_text)
 
-        parsed_data = self.parse_resume_data(extracted_text)
-
-        if not isinstance(parsed_data, dict):  
+        if not isinstance(parsed_data, dict) or not parsed_data:
             return Response({"error": "Failed to parse resume data correctly"}, status=status.HTTP_400_BAD_REQUEST)
+        user.username = parsed_data.get("name", user.username)
+        user.first_name = parsed_data.get("name", "").split(" ")[0] if parsed_data.get("name") else user.first_name
+        user.last_name = " ".join(parsed_data.get("name", "").split(" ")[1:]) if parsed_data.get("name") else user.last_name
+        user.email = parsed_data.get("email", user.email)
+        user.phone = parsed_data.get("phone", user.phone)
+        user.location = parsed_data.get("location", user.location)
+        user.github_link = parsed_data.get("github_link", user.github_link)
+        user.linkedin_link = parsed_data.get("linkedin_link", user.linkedin_link)
+        user.save()
 
-        resume.summary = parsed_data.get("summary", "")
 
-        for skill_name in parsed_data.get("skills", []):
-            Skill.objects.create(resume=resume, skill=skill_name)
 
-        for edu in parsed_data.get("education", []):
-            if isinstance(edu, dict):
-                Education.objects.create(
-                    resume=resume, 
-                    degree=edu.get("degree", ""),
-                    institution=edu.get("institution", ""),
-                    start_date=edu.get("start_date", ""),
-                    end_date=edu.get("end_date", ""),
-                    description=edu.get("description", "")
-                )
 
-        for proj in parsed_data.get("projects", []):
-            if isinstance(proj, dict):
-                Project.objects.create(
-                    resume=resume, 
-                    title=proj.get("title", ""),
-                    description=proj.get("description", ""),
-                    github_link=proj.get("github_link", None)
-                )
+        resume = Resume.objects.create(
+            user=user,
+            summary=parsed_data.get("summary", ""),
+            pdf_file=pdf_file
+        )
 
-        for exp in parsed_data.get("experiences", []):
-            if isinstance(exp, dict):
-                Experience.objects.create(
-                    resume=resume, 
-                    job_title=exp.get("job_title", ""),
-                    company=exp.get("company", ""),
-                    start_date=exp.get("start_date", ""),
-                    end_date=exp.get("end_date", ""),
-                    description=exp.get("description", "")
-                )
+        skills = [Skill(resume=resume, skill=skill) for skill in parsed_data.get("skills", []) if isinstance(skill, str)]
+        Skill.objects.bulk_create(skills)
 
-        for course in parsed_data.get("trainings_courses", []):
-            if isinstance(course, dict):
-                TrainingCourse.objects.create(
-                    resume=resume, 
-                    title=course.get("title", ""),
-                    institution=course.get("institution", ""),
-                    start_date=course.get("start_date", ""),
-                    end_date=course.get("end_date", ""),
-                    description=course.get("description", "")
-                )
+        education_entries = [Education(resume=resume, **edu) for edu in parsed_data.get("education", []) if isinstance(edu, dict)]
+        Education.objects.bulk_create(education_entries)
+
+        projects = [Project(resume=resume, **proj) for proj in parsed_data.get("projects", []) if isinstance(proj, dict)]
+        Project.objects.bulk_create(projects)
+
+        experiences = [Experience(resume=resume, **exp) for exp in parsed_data.get("experiences", []) if isinstance(exp, dict)]
+        Experience.objects.bulk_create(experiences)
+
+        training_courses = [TrainingCourse(resume=resume, **course) for course in parsed_data.get("trainings_courses", []) if isinstance(course, dict)]
+        TrainingCourse.objects.bulk_create(training_courses)
 
         resume.save()
         serializer = ResumeSerializer(resume)
@@ -103,42 +82,52 @@ class ResumeUploadView(APIView):
         }, status=status.HTTP_201_CREATED)
 
     def extract_text_from_pdf(self, pdf_data):
-        doc = fitz.open(stream=pdf_data, filetype="pdf")  
-        text = "\n".join(page.get_text("text") for page in doc)
-        return text
+        try:
+            doc = fitz.open(stream=pdf_data, filetype="pdf")
+            text = "\n".join(page.get_text("text") for page in doc)
+            return text.strip()
+        except Exception as e:
+            print(f"Error extracting text from PDF: {e}")
+            return ""
 
-    def parse_resume_data(self, resume_text):
+    def parse_resume_with_gemini(self, resume_text):
+        prompt = f"""
+        Extract structured resume data from the following text:
+        {resume_text}
         
-        sections = {
-            "summary": "",
-            "skills": [],
-            "education": [],
-            "projects": [],
-            "experiences": [],
-            "trainings_courses": []
-        }
+        Provide the response in a structured JSON format with the following fields:
+        - name (full name of the person)
+        - phone (contact number)
+        - location (city and country)
+        - email
+        - github_link
+        - linkedin_link
+        - summary
+        - skills (list)
+        - education (list of dicts with 'degree', 'institution', 'start_date', 'end_date', 'description')
+        - projects (list of dicts with 'title', 'description', 'github_link')
+        - experiences (list of dicts with 'job_title', 'company', 'start_date', 'end_date', 'description')
+        - trainings_courses (list of dicts with 'title', 'institution', 'start_date', 'end_date', 'description')
+        
+        Ensure the response is in **valid JSON format**.
+        """
 
-        patterns = {
-            "summary": r"(Summary|Objective)(.*?)(?=(Skills|Education|Experience|Projects|Certifications|$))",
-            "skills": r"(Skills|Technical Skills)(.*?)(?=(Education|Experience|Projects|Certifications|$))",
-            "education": r"(Education|Academic Background)(.*?)(?=(Experience|Projects|Certifications|$))",
-            "projects": r"(Projects|Personal Projects)(.*?)(?=(Experience|Certifications|$))",
-            "experiences": r"(Experience|Work Experience)(.*?)(?=(Projects|Certifications|$))",
-            "trainings_courses": r"(Certifications|Courses|Trainings)(.*?)(?=$)"
-        }
+        try:
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content([prompt])
 
-        for key, pattern in patterns.items():
-            match = re.search(pattern, resume_text, re.DOTALL | re.IGNORECASE)
-            if match:
-                extracted_text = match.group(2).strip()
+            response_text = response.text.strip()
+            response_text = re.sub(r"```json|```", "", response_text).strip()
 
-                if key == "skills":
-                    sections[key] = [skill.strip() for skill in extracted_text.split(",") if skill.strip()]
-                elif key in ["education", "projects", "experiences", "trainings_courses"]:
-                    items = extracted_text.split("\n") if extracted_text else []
-                    sections[key] = [{"description": item.strip()} for item in items if item.strip()]
-                else:
-                    sections[key] = extracted_text.strip()
+            if not response_text.startswith("{") or not response_text.endswith("}"):
+                raise ValueError("The response is not a valid JSON structure.")
 
-        print("Parsed Data:", sections)  
-        return sections
+            parsed_data = json.loads(response_text)
+
+            return parsed_data
+        except json.JSONDecodeError as e:
+            print("JSON Decode Error:", e)
+            return {"error": "Failed to parse resume data correctly"}
+        except Exception as e:
+            print(f"Error in Gemini API response: {e}")
+            return {"error": str(e)}

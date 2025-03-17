@@ -43,7 +43,7 @@ class Education(models.Model):
 class Project(models.Model):
     resume = models.ForeignKey(Resume, on_delete=models.CASCADE, related_name="projects")
     title = models.CharField(max_length=255)
-    description = models.TextField()
+    description = models.TextField(null=True, blank=True)
     github_link = models.URLField(blank=True, null=True)
 
     def __str__(self):
