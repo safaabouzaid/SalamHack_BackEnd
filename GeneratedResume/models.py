@@ -13,7 +13,8 @@ class User(AbstractUser):
         return self.username
 
 class Resume(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="resumes")
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="resumes",null=True, blank=True)
     summary = models.TextField(blank=True, null=True)
     pdf_file = models.FileField(upload_to='resumes/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

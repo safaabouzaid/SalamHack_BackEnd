@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'GeneratedQuestion',
     'RecommendationJob',
     'UploadResume',
+    'ConvertResume',
 ]
 
 MIDDLEWARE = [

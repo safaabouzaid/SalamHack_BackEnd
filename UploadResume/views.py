@@ -91,27 +91,31 @@ class ResumeUploadView(APIView):
             return ""
 
     def parse_resume_with_gemini(self, resume_text):
-        prompt = f"""
-        Extract structured resume data from the following text:
-        {resume_text}
-        
-        Provide the response in a structured JSON format with the following fields:
-        - name (full name of the person)
-        - phone (contact number)
-        - location (city and country)
-        - email
-        - github_link
-        - linkedin_link
-        - summary
-        - skills (list)
-        - education (list of dicts with 'degree', 'institution', 'start_date', 'end_date', 'description')
-        - projects (list of dicts with 'title', 'description', 'github_link')
-        - experiences (list of dicts with 'job_title', 'company', 'start_date', 'end_date', 'description')
-        - trainings_courses (list of dicts with 'title', 'institution', 'start_date', 'end_date', 'description')
-        
-        Ensure the response is in **valid JSON format**.
-        """
 
+        
+        prompt = f"""
+    Extract ATS-friendly resume data from the following text:
+    {resume_text}
+    
+    Ensure the output is structured in **valid JSON format** with the following fields:
+    - target_job_title (the desired job title)
+    - name (full name of the person)
+    - email
+    - phone
+    - location (city and country)
+    - linkedin_link
+    - github_link
+    - summary
+    - keywords (list of job-related keywords)
+    - skills (list of relevant skills)
+    - education (list of dicts with 'degree', 'institution', 'start_date', 'end_date', 'description')
+    - work_experience (list of dicts with 'job_title', 'company', 'start_date', 'end_date', 'description')
+    - certifications (list of dicts with 'title', 'institution', 'issue_date', 'expiry_date')
+    - projects (list of dicts with 'title', 'description', 'github_link', 'technologies_used')
+    - publications (list of dicts with 'title', 'journal', 'publication_date', 'link')
+    
+    Ensure all fields follow ATS-friendly formatting, using clear job-related keywords.
+    """
         try:
             model = genai.GenerativeModel("gemini-1.5-flash")
             response = model.generate_content([prompt])

@@ -7,7 +7,6 @@ from .serializer import ResumeEvaluationSerializer
 import google.generativeai as genai
 from decouple import config
 from django.shortcuts import get_object_or_404
-
 import os
 import json
 

@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-
 from resume.settings import GOOGLE_API_KEY
 from .models import Education, Project, Experience, TrainingCourse, Resume, Skill
 from .serializer import ResumeSerializer, UserSerializer
@@ -14,13 +13,12 @@ from rest_framework.parsers import MultiPartParser, FormParser
 import fitz
 import re
 
-
 User = get_user_model()
 
 genai.configure(api_key="AIzaSyAWfqk0NLuH3FV8BJgI1RtGQYoRxIR46sM")
 
+
 class ResumeAPIView(APIView):
-    
     def post(self, request):
         user_data = request.data
 
@@ -61,7 +59,12 @@ class ResumeAPIView(APIView):
         TrainingCourse.objects.bulk_create(training_objects)
 
         serializer = ResumeSerializer(resume)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({
+            "status": "success",
+            "code": status.HTTP_201_CREATED,
+            "message": "Resume created successfully",
+            "data": serializer.data
+        }, status=status.HTTP_201_CREATED)
 
     def generate_summary(self, user_data):
         skills_text = ", ".join([skill.get('skill', 'N/A') for skill in user_data.get('skills', [])])
