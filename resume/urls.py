@@ -23,6 +23,7 @@ urlpatterns = [
     path('resume/', include('EvaluationResume.urls')),
     path('', include('GeneratedQuestion.urls')),
     path('resume/', include('RecommendationJob.urls')),
+    path('resume/', include('UploadResume.urls')),
 
 
 

@@ -8,7 +8,6 @@ from GeneratedResume.serializer import ResumeSerializer
 from .serializer import JobSerializer
 import json
 
-# Configure Google Gemini AI
 
 class JobRecommendationView(APIView):
     def get(self, request, user_id):
