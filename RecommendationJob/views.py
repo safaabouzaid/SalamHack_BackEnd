@@ -8,6 +8,7 @@ from GeneratedResume.serializer import ResumeSerializer
 from .serializer import JobSerializer
 import json
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
 
 
 class JobRecommendationView(APIView):
@@ -58,3 +59,20 @@ class JobRecommendationView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=500)
+
+
+class JobAPIView(APIView):
+    def get(self, request):
+        jobs = Job.objects.all()
+        serializer = JobSerializer(jobs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = JobSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Job added successfully",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
