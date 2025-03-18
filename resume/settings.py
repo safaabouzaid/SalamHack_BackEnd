@@ -13,6 +13,7 @@ from decouple import config
 from pathlib import Path
 import os
 from datetime import timedelta
+import dj_database_url
 
 GOOGLE_API_KEY = config('GOOGLE_API_KEY', default='')
 
@@ -94,11 +95,20 @@ WSGI_APPLICATION = 'resume.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(
+        'postgresql://forsatech_user:0CDEpvMUV4sXs4sWYXizDRfwIKLf38MF@dpg-cvchk9bqf0us73dgfem0-a.oregon-postgres.render.com/forsatech',
+      
+    )
 }
 
 
