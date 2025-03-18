@@ -10,14 +10,16 @@ import fitz  # PyMuPDF
 import json
 import re
 import google.generativeai as genai
+from rest_framework.permissions import IsAuthenticated
 
 User = get_user_model()
 
 class ResumeUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated] 
 
-    def post(self, request, user_id):
-        user = get_object_or_404(User, id=user_id)
+    def post(self, request):
+        user = request.user
 
         if "pdf_file" not in request.FILES:
             return Response({"error": "No PDF file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
@@ -64,8 +66,16 @@ class ResumeUploadView(APIView):
         education_entries = [Education(resume=resume, **edu) for edu in parsed_data.get("education", []) if isinstance(edu, dict)]
         Education.objects.bulk_create(education_entries)
 
-        projects = [Project(resume=resume, **proj) for proj in parsed_data.get("projects", []) if isinstance(proj, dict)]
-        Project.objects.bulk_create(projects)
+        allowed_fields = {field.name for field in Project._meta.fields if field.name != "id"}
+        
+        project_objects = []
+        for proj in parsed_data.get("projects", []):
+            if isinstance(proj, dict):
+                filtered_proj = {key: value for key, value in proj.items() if key in allowed_fields}
+                project_objects.append(Project(resume=resume, **filtered_proj))
+                
+        Project.objects.bulk_create(project_objects)  
+
 
         experiences = [Experience(resume=resume, **exp) for exp in parsed_data.get("experiences", []) if isinstance(exp, dict)]
         Experience.objects.bulk_create(experiences)

@@ -2,15 +2,15 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
-    username = models.CharField(max_length=255, unique=True, default='')
-    email = models.EmailField(unique=True)
+    username = models.CharField(max_length=255,unique=False, default='')
+    email = models.EmailField(unique=False)
     phone = models.CharField(max_length=20, blank=True, null=True)
     location = models.CharField(max_length=255, blank=True, null=True)
     github_link = models.URLField(blank=True, null=True)     
     linkedin_link = models.URLField(blank=True, null=True)     
     password = models.CharField(max_length=128,null=True, blank=True)
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    USERNAME_FIELD = 'id'
+    REQUIRED_FIELDS = ['username,email']
     def __str__(self):
         return self.username
 
