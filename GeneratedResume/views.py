@@ -50,7 +50,9 @@ class ResumeAPIView(APIView):
         Education.objects.bulk_create(education_objects)
         
         project_objects = [Project(resume=resume, **proj) for proj in user_data.get("projects", [])]
-        Project.objects.bulk_create(project_objects)
+        if isinstance(proj, dict):
+           proj.pop("technologies_used", None)
+           Project.objects.bulk_create(project_objects)
         
         experience_objects = [Experience(resume=resume, **exp) for exp in user_data.get("experiences", [])]
         Experience.objects.bulk_create(experience_objects)

@@ -4,15 +4,27 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import GenerateQuestion
-from .serializers import GenerateQuestionSerializer
+#from .models import GenerateQuestion
+from RecommendationJob.models import Job
+#from .serializers import GenerateQuestionSerializer
 import google.generativeai as genai
-from .utils import extract_json 
 from .utils import extract_json
 
-def generate_questions(job_field):
+def generate_questions(title, required_skills, description):
     input_prompt = f'''
-    You are an AI assistant. Generate exactly 5 multiple-choice questions (MCQs) related to "{job_field}" in JSON format.
+    You are an AI assistant specializing in job interview preparation. Generate exactly 5 multiple-choice questions (MCQs) 
+    for a job interview based on the following job title, description, and required skills.
+    
+    The questions should:
+    - Reflect real-world job interview scenarios.
+    - Test problem-solving, debugging, and practical experience.
+    - Include technical questions with real-world applications.
+    - Contain at least one question that involves analyzing code.
+
+    Job Title: {title}
+    Job Description: {description}
+    Required Skills: {required_skills}
+
     Each MCQ should have:
     - A question string.
     - Four options in an array, where each option is a string.
@@ -51,21 +63,20 @@ def generate_questions(job_field):
 
 class GenerateQuestionView(APIView):
     def post(self, request):
-        job_field = request.data.get("job_field")
-        if not job_field:
-            return Response({"error": "job_field is required"}, status=status.HTTP_400_BAD_REQUEST)
+        title = request.data.get("title")
+        required_skills = request.data.get("required_skills")
+        description = request.data.get("description")
 
-        generated_questions = generate_questions(job_field)
+        if not title or not required_skills or not description:
+            return Response({"error": "title, required_skills, and description are required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        generated_questions = generate_questions(title, required_skills, description)
+        
         if "Invalid JSON format received from the model" in generated_questions["questions"]:
             return Response({"error": "Failed to generate valid questions"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        question_entry = GenerateQuestion.objects.create(
-            job_field=job_field,
-            questions=generated_questions["questions"]
-        )
-
-        serializer = GenerateQuestionSerializer(question_entry)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(generated_questions, status=status.HTTP_201_CREATED)
 
 
 
