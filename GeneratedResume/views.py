@@ -49,11 +49,15 @@ class ResumeAPIView(APIView):
         education_objects = [Education(resume=resume, **edu) for edu in user_data.get("education", [])]
         Education.objects.bulk_create(education_objects)
         
-        project_objects = [Project(resume=resume, **proj) for proj in user_data.get("projects", [])]
-        if isinstance(proj, dict):
-           proj.pop("technologies_used", None)
-           Project.objects.bulk_create(project_objects)
         
+        project_objects = []
+        for proj in user_data.get("projects", []):
+            if isinstance(proj, dict):
+                proj.pop("technologies_used", None)
+            project_objects.append(Project(resume=resume, **proj))
+        
+        Project.objects.bulk_create(project_objects)
+
         experience_objects = [Experience(resume=resume, **exp) for exp in user_data.get("experiences", [])]
         Experience.objects.bulk_create(experience_objects)
         
