@@ -10,11 +10,9 @@ class JobsFilter(django_filters.FilterSet):
 
     def filter_by_keyword(self, queryset, name, value):
         return queryset.filter(
-            title__icontains=value
-        ) | queryset.filter(
-            description__icontains=value
-        ) | queryset.filter(
-            required_skills__icontains=value
-        ) | queryset.filter(
-            location__icontains=value
-        )
+            Q(title__icontains=value) |
+            Q(description__icontains=value) |
+            Q(required_skills__icontains=value) |
+            Q(location__icontains=value)
+            )
+            
