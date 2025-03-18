@@ -1,4 +1,5 @@
 import django_filters
+from django.db.models import Q
 from .models import Job
 
 class JobsFilter(django_filters.FilterSet):
@@ -15,4 +16,3 @@ class JobsFilter(django_filters.FilterSet):
             Q(required_skills__icontains=value) |
             Q(location__icontains=value)
             )
-            
