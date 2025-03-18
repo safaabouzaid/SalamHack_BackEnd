@@ -7,13 +7,16 @@ from GeneratedResume.models import Resume
 from GeneratedResume.serializer import ResumeSerializer
 from .serializer import JobSerializer
 import json
+from rest_framework.permissions import IsAuthenticated
 
 
 class JobRecommendationView(APIView):
-    def get(self, request, user_id):
+    
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
         try:
-            # 
-            resume = Resume.objects.filter(user_id=user_id).first()
+            user = request.user
+            resume = Resume.objects.filter(user=user).first()
             if not resume:
                 return Response({"error": "Resume not found"}, status=404)
 
