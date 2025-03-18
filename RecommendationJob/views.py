@@ -9,7 +9,7 @@ from .serializer import JobSerializer
 import json
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-
+from .filters import JobsFilter
 
 class JobRecommendationView(APIView):
     
@@ -63,8 +63,12 @@ class JobRecommendationView(APIView):
 
 class JobAPIView(APIView):
     def get(self, request):
-        jobs = Job.objects.all()
-        serializer = JobSerializer(jobs, many=True)
+        #jobs = Job.objects.all()
+        filterset =JobsFilter(request.GET,queryset=Job.objects.all().order_by('id'))
+
+        #serializer = JobSerializer(jobs, many=True)
+        serializer = JobSerializer(filterset.qs, many=True)
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
