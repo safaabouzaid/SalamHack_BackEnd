@@ -26,4 +26,6 @@ urlpatterns = [
     path('resume/', include('EvaluationResume.urls')),
     path('resume/', include('UploadResume.urls')),
     path('resume/', include('ConvertResume.urls')),
+    path('auth/',include("authentication.urls")),
+
 ]

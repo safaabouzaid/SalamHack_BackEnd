@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'RecommendationJob',
     'UploadResume',
     'ConvertResume',
+    'authentication',
 ]
 
 MIDDLEWARE = [
@@ -64,6 +65,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
 ROOT_URLCONF = 'resume.urls'
 
 TEMPLATES = [
@@ -94,6 +98,14 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
 
 AUTH_USER_MODEL = 'GeneratedResume.User'
 
