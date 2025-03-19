@@ -6,7 +6,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import GenerateQuestion
 from RecommendationJob.models import Job
-#from .serializers import GenerateQuestionSerializer
+from .serializers import GenerateQuestionSerializer
 import google.generativeai as genai
 from .utils import extract_json
 
