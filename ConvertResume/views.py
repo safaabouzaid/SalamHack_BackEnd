@@ -38,17 +38,65 @@ class ConvertResumeAPIView(APIView):
         resume = self.generate_ats_resume(parsed_data)
 
         ats_resume = {
-         "name": parsed_data.get("name", ""),
-         "phone": parsed_data.get("phone", ""),
-         "email": parsed_data.get("email", ""),
-         "location": parsed_data.get("location", ""),
-         "summary": self.generate_summary(parsed_data),
-         "skills": parsed_data.get("skills", []),
-         "education": parsed_data.get("education", []),
-         "projects": parsed_data.get("projects", []),
-         "experiences": parsed_data.get("experiences", []),
-         "trainings_courses": parsed_data.get("trainings_courses", []),
-}
+            "status": "success",
+            "code": 201,
+            "message": "Resume converted successfully",
+            "data": {
+                "id": resume.id,
+                "personal_details": {
+                    "username": parsed_data.get("username", None),
+                    "email": parsed_data.get("email", None),
+                    "phone": parsed_data.get("phone", None),
+                    "location": parsed_data.get("location", None),
+                    "github_link": parsed_data.get("github_link", None),
+                    "linkedin_link": parsed_data.get("linkedin_link", None),
+                },
+                "summary": self.generate_summary(parsed_data),
+                "skills": [
+                    {"skill": s.get("skill", None), "level": s.get("level", None)}
+                    for s in parsed_data.get("skills", []) if isinstance(s, dict)
+                ],
+                "education": [
+                    {
+                        "degree": edu.get("degree", None),
+                        "institution": edu.get("institution", None),
+                        "start_date": edu.get("start_date", None),
+                        "end_date": edu.get("end_date", None),
+                        "description": edu.get("description", None),
+                    }
+                    for edu in parsed_data.get("education", []) if isinstance(edu, dict)
+                ],
+                "projects": [
+                    {
+                        "title": proj.get("title", None),
+                        "description": proj.get("description", None),
+                        "github_link": proj.get("github_link", None),
+                    }
+                    for proj in parsed_data.get("projects", []) if isinstance(proj, dict)
+                ],
+                "experiences": [
+                    {
+                        "job_title": exp.get("job_title", None),
+                        "company": exp.get("company", None),
+                        "start_date": exp.get("start_date", None),
+                        "end_date": exp.get("end_date", None),
+                        "description": exp.get("description", None),
+                    }
+                    for exp in parsed_data.get("experiences", []) if isinstance(exp, dict)
+                ],
+                "trainings_courses": [
+                    {
+                        "title": course.get("title", None),
+                        "institution": course.get("institution", None),
+                        "start_date": course.get("start_date", None),
+                        "end_date": course.get("end_date", None),
+                        "description": course.get("description", None),
+                    }
+                    for course in parsed_data.get("trainings_courses", []) if isinstance(course, dict)
+                ],
+                "pdf_file": None  
+            }
+        }
         return Response(ats_resume, status=status.HTTP_201_CREATED)
 
         return Response({
