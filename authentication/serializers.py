@@ -10,15 +10,18 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'phone', 'location', 'github_link', 'linkedin_link']
 
 class SignUpSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'phone', 'location', 'github_link', 'linkedin_link']
+        fields = ['email', 'username', 'password']
 
     def create(self, validated_data):
-        validated_data['password'] = make_password(validated_data['password'])
-        return super().create(validated_data)
+        user = User(
+            email=validated_data['email'],
+            username=validated_data['username']
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()

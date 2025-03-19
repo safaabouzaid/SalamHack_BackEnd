@@ -27,8 +27,6 @@ def register(request):
         }, status=status.HTTP_201_CREATED)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @api_view(['POST'])
 def login(request):
     serializer = LoginSerializer(data=request.data)
@@ -38,7 +36,7 @@ def login(request):
         password = serializer.validated_data['password']
 
         try:
-            user = User.objects.get(email=email)  
+            user = User.objects.get(email=email)
         except User.DoesNotExist:
             return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
