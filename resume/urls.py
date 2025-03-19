@@ -29,3 +29,5 @@ urlpatterns = [
     path('auth/',include("authentication.urls")),
 
 ]
+
+urlpatterns += staticfiles_urlpatterns()

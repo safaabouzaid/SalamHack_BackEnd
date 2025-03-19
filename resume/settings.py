@@ -34,9 +34,7 @@ SECRET_KEY = 'django-insecure-2bn00&+vn_*ystrrca7ri50j5)q3)=%e)07=ykgabm&l5%n$yi
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['forsatech.onrender.com','localhost','127.0.0.1']
 
 # Application definition
 
@@ -66,6 +64,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+MIDDLEWARE.remove('django.middleware.security.SecurityMiddleware')
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
