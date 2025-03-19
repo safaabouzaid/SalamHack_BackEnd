@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-#from .models import GenerateQuestion
+from .models import GenerateQuestion
 from RecommendationJob.models import Job
 #from .serializers import GenerateQuestionSerializer
 import google.generativeai as genai
@@ -70,13 +70,28 @@ class GenerateQuestionView(APIView):
         if not title or not required_skills or not description:
             return Response({"error": "title, required_skills, and description are required"}, status=status.HTTP_400_BAD_REQUEST)
         
+        
+        job, created = Job.objects.get_or_create(
+            title=title, 
+            description=description, 
+            required_skills=required_skills
+        )
+        
         generated_questions = generate_questions(title, required_skills, description)
         
         if "Invalid JSON format received from the model" in generated_questions["questions"]:
             return Response({"error": "Failed to generate valid questions"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
         
-        return Response(generated_questions, status=status.HTTP_201_CREATED)
+
+        data = {"job": job.id, "questions": generated_questions["questions"]}
+        serializer = GenerateQuestionSerializer(data=data)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 
