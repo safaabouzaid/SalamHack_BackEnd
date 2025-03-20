@@ -36,7 +36,7 @@ SECRET_KEY = 'django-insecure-2bn00&+vn_*ystrrca7ri50j5)q3)=%e)07=ykgabm&l5%n$yi
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-
+####
 ALLOWED_HOSTS = ['forsatech.onrender.com','localhost','127.0.0.1']
 
 
