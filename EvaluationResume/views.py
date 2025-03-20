@@ -58,7 +58,8 @@ class ResumeEvaluationView(APIView):
         user.username = parsed_data.get("name", user.username)
         user.first_name = parsed_data.get("name", "").split(" ")[0] if parsed_data.get("name") else user.first_name
         user.last_name = " ".join(parsed_data.get("name", "").split(" ")[1:]) if parsed_data.get("name") else user.last_name
-        user.email = parsed_data.get("email", user.email)
+        #user.email = parsed_data.get("email", user.email)
+
         user.phone = parsed_data.get("phone", user.phone)
         user.location = parsed_data.get("location", user.location)
         user.github_link = parsed_data.get("github_link", user.github_link)

@@ -11,46 +11,50 @@ import json
 import re
 import google.generativeai as genai
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 User = get_user_model()
 
 class ResumeUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
+    authentication_classes=[JWTAuthentication]
     permission_classes = [IsAuthenticated] 
 
     def post(self, request):
         user = request.user
-
+    
         if "pdf_file" not in request.FILES:
             return Response({"error": "No PDF file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
-
+    
         pdf_file = request.FILES["pdf_file"]
-
+    
         if pdf_file.size == 0:
             return Response({"error": "Uploaded file is empty"}, status=status.HTTP_400_BAD_REQUEST)
-
+    
         if pdf_file.content_type != "application/pdf":
             return Response({"error": "Uploaded file is not a valid PDF"}, status=status.HTTP_400_BAD_REQUEST)
-
+    
         extracted_text = self.extract_text_from_pdf(pdf_file.read())
-
+    
         if not extracted_text.strip():
             return Response({"error": "Failed to extract text from PDF"}, status=status.HTTP_400_BAD_REQUEST)
-
+    
         parsed_data = self.parse_resume_with_gemini(extracted_text)
-
+    
         if not isinstance(parsed_data, dict) or not parsed_data:
             return Response({"error": "Failed to parse resume data correctly"}, status=status.HTTP_400_BAD_REQUEST)
+    
+        parsed_data.pop("email", None)  
         user.username = parsed_data.get("name", user.username)
         user.first_name = parsed_data.get("name", "").split(" ")[0] if parsed_data.get("name") else user.first_name
         user.last_name = " ".join(parsed_data.get("name", "").split(" ")[1:]) if parsed_data.get("name") else user.last_name
-        user.email = parsed_data.get("email", user.email)
         user.phone = parsed_data.get("phone", user.phone)
         user.location = parsed_data.get("location", user.location)
         user.github_link = parsed_data.get("github_link", user.github_link)
         user.linkedin_link = parsed_data.get("linkedin_link", user.linkedin_link)
         user.save()
-
+    
+    
 
 
 
