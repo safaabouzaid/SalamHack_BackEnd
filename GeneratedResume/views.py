@@ -21,49 +21,65 @@ genai.configure(api_key="AIzaSyAWfqk0NLuH3FV8BJgI1RtGQYoRxIR46sM")
 class ResumeAPIView(APIView):
     def post(self, request):
         user_data = request.data
+        try:
+            user, created = User.objects.get_or_create(
+                username=user_data.get("username"),
+                email=user_data.get("email"),
+                phone= user_data.get("phone"),
+                location= user_data.get("location"),
+                github_link=user_data.get('github_link'),
+                linkedin_link=user_data.get('linkedin_link'),
+            )
+        except:
+            return Response({"status": "Faild", "message": "couldn't create user",
+                             "code": status.HTTP_400_BAD_REQUEST,})
+        try:
+            if created:
+                user.set_password(user_data.get("password", "default_password"))
+                user.save()
+        except:
+                return Response({"status": "Faild", "message": "can't assign pasword to user",
+                             "code": status.HTTP_400_BAD_REQUEST,})
+        try:
+            profile_summary = self.generate_summary(user_data)
+            resume = Resume.objects.create(
+                user=user,
+                summary=profile_summary,
+                
+            )
+        except:
+            return Response({"status": "Faild", "message": "couldn't create summery",
+                             "code": status.HTTP_400_BAD_REQUEST,})
 
-        user, created = User.objects.get_or_create(
-            username=user_data.get("username"),
-            email=user_data.get("email"),
-            phone= user_data.get("phone"),
-            location= user_data.get("location"),
-            github_link=user_data.get('github_link'),
-            linkedin_link=user_data.get('linkedin_link'),
-        
-        )
-        if created:
-            user.set_password(user_data.get("password", "default_password"))
-            user.save()
-
-        profile_summary = self.generate_summary(user_data)
-        
-        resume = Resume.objects.create(
-            user=user,
-            summary=profile_summary,
+        try:
+            skill_objects = [Skill(resume=resume, skill=skill["skill"], level=skill.get("level")) for skill in user_data.get("skills", [])]
+            Skill.objects.bulk_create(skill_objects)
             
-        )
+            education_objects = [Education(resume=resume, **edu) for edu in user_data.get("education", [])]
+            Education.objects.bulk_create(education_objects)
+        except:
+            return Response({"status": "Faild", "message": "couldn't make skills or education",
+                             "code": status.HTTP_400_BAD_REQUEST,})
+        
+        try:
+            
+            project_objects = []
+            for proj in user_data.get("projects", []):
+                if isinstance(proj, dict):
+                    proj.pop("technologies_used", None)
+                project_objects.append(Project(resume=resume, **proj))
+            
+            Project.objects.bulk_create(project_objects)
 
-        skill_objects = [Skill(resume=resume, skill=skill["skill"], level=skill.get("level")) for skill in user_data.get("skills", [])]
-        Skill.objects.bulk_create(skill_objects)
-        
-        education_objects = [Education(resume=resume, **edu) for edu in user_data.get("education", [])]
-        Education.objects.bulk_create(education_objects)
-        
-        
-        project_objects = []
-        for proj in user_data.get("projects", []):
-            if isinstance(proj, dict):
-                proj.pop("technologies_used", None)
-            project_objects.append(Project(resume=resume, **proj))
-        
-        Project.objects.bulk_create(project_objects)
-
-        experience_objects = [Experience(resume=resume, **exp) for exp in user_data.get("experiences", [])]
-        Experience.objects.bulk_create(experience_objects)
-        
-        training_objects = [TrainingCourse(resume=resume, **training) for training in user_data.get("trainings_courses", [])]
-        TrainingCourse.objects.bulk_create(training_objects)
-
+            experience_objects = [Experience(resume=resume, **exp) for exp in user_data.get("experiences", [])]
+            Experience.objects.bulk_create(experience_objects)
+            
+            training_objects = [TrainingCourse(resume=resume, **training) for training in user_data.get("trainings_courses", [])]
+            TrainingCourse.objects.bulk_create(training_objects)
+        except:
+            return Response({"status": "Faild", "message": "couldn't Project or Experince or Training",
+                             "code": status.HTTP_400_BAD_REQUEST,})
+            
         serializer = ResumeSerializer(resume)
         return Response({
             "status": "success",
@@ -71,7 +87,7 @@ class ResumeAPIView(APIView):
             "message": "Resume created successfully",
             "data": serializer.data
         }, status=status.HTTP_201_CREATED)
-
+            
     def generate_summary(self, user_data):
         skills_text = ", ".join([skill.get('skill', 'N/A') for skill in user_data.get('skills', [])])
         education_text = "; ".join(
